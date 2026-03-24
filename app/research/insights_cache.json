@@ -1,0 +1,103 @@
+{
+  "twitter": {
+    "best_times": [
+      "07:30",
+      "12:00",
+      "17:30"
+    ],
+    "hashtags": [
+      "#IrishRental",
+      "#DublinRent",
+      "#RentIreland",
+      "#HousingCrisis",
+      "#DaftIreland",
+      "#RentingInDublin",
+      "#IrishHousing",
+      "#RentAlert"
+    ],
+    "tone": "punchy and direct \u2014 highlight urgency, frustration with the market, and instant value"
+  },
+  "reddit": {
+    "best_times": [
+      "09:00",
+      "13:00",
+      "20:00"
+    ],
+    "hashtags": [],
+    "tone": "casual and helpful, like a real person who built something to solve their own problem \u2014 never salesy, always add value to the conversation first",
+    "subreddits": [
+      "DublinRentals",
+      "irishpersonalfinance",
+      "ireland",
+      "dublin",
+      "AskIreland",
+      "movingtoireland",
+      "DevelEire",
+      "CollegesIreland"
+    ]
+  },
+  "facebook": {
+    "best_times": [
+      "08:30",
+      "12:30",
+      "19:00"
+    ],
+    "hashtags": [
+      "#IrishRental",
+      "#DublinHousing",
+      "#RentIreland",
+      "#AccommodationIreland",
+      "#HousingCrisis"
+    ],
+    "tone": "friendly and conversational \u2014 empathise with the rental struggle, position as a free tool from the community",
+    "groups": [
+      "Dublin Rentals & Accommodation",
+      "Accommodation Ireland",
+      "Dublin Housing - Rentals & Flatshares",
+      "Rent in Dublin",
+      "Irish Rental Market Discussion",
+      "Moving to Ireland",
+      "Expats in Dublin",
+      "UCD Accommodation",
+      "Trinity College Dublin Accommodation",
+      "Cork Rentals & Accommodation",
+      "Galway Rentals",
+      "Students Looking for Accommodation Ireland"
+    ]
+  },
+  "linkedin": {
+    "best_times": [
+      "08:00",
+      "12:00",
+      "17:30"
+    ],
+    "hashtags": [
+      "#PropTech",
+      "#IrishTech",
+      "#RentalIreland",
+      "#ChromeExtension",
+      "#BuildInPublic",
+      "#HousingCrisis",
+      "#StartupIreland",
+      "#TechForGood",
+      "#ProductLaunch"
+    ],
+    "tone": "professional but personable \u2014 builder sharing their product journey, the problem they noticed, and how they solved it; engage with Irish tech and property communities"
+  },
+  "strategy_notes": {
+    "general_approach": "Lead with empathy for the Irish rental crisis. Everyone knows listings vanish in minutes \u2014 position RentPulse as the unfair advantage. Emphasise FREE and instant.",
+    "twitter_strategy": "Short punchy threads about how fast Irish rentals disappear. Use stats (e.g. 'Average Daft listing gets 100+ enquiries in 1 hour'). Engage with housing journalists, TDs, and rental commentators. Quote-tweet Daft reports and housing news with a subtle CTA.",
+    "reddit_strategy": "Never post direct ads. Comment helpfully in rental-seeking threads. Share as 'I built this free tool' in relevant threads. Do a proper launch post in r/ireland or r/DevelEire framed as a side project. Answer questions transparently.",
+    "facebook_strategy": "Post in accommodation groups when people express frustration about missing listings. Share as a helpful recommendation, not an ad. Create short video demos showing how fast alerts come through. Encourage word of mouth.",
+    "linkedin_strategy": "Frame as a build-in-public story. Share the journey: why you built it, the tech stack, user feedback. Tag Irish tech influencers and proptech accounts. Post milestone updates (user counts, listings tracked).",
+    "content_cadence": "Twitter: 1-2 posts daily plus engagement. Reddit: 3-4 helpful comments per week, 1 post per fortnight. Facebook: 2-3 group posts per week, rotate groups. LinkedIn: 2-3 posts per week.",
+    "key_hooks": [
+      "Daft listings disappear in minutes \u2014 get alerts before everyone else",
+      "Free Chrome extension \u2014 no catch, no subscription",
+      "Stop refreshing Daft every 5 minutes",
+      "Built by Irish renters, for Irish renters",
+      "The rental market is broken \u2014 this levels the playing field"
+    ],
+    "timing_note": "All times in Irish Standard Time (IST/GMT+1 in summer, GMT in winter). Peak engagement aligns with commute times, lunch breaks, and evening browsing."
+  }
+}

@@ -1,0 +1,20 @@
+services:
+  rentpulse-bot:
+    build: .
+    image: rentpulse-social
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - bot-net
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/data
+
+networks:
+  bot-net:
+    driver: bridge
