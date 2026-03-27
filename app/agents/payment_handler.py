@@ -34,56 +34,40 @@ def _map_type(stripe_event_type: str) -> str:
 
 # ── Field extraction ──────────────────────────────────────────────────────────
 
-def _extract_fields(event: dict) -> dict:
+def _extract_fields(event: dict) -> dict | None:
     """
     Pull relevant fields out of a Stripe event dict.
-    Handles checkout sessions, payment intents, invoices, and subscriptions.
-    Falls back to empty strings / 0 if a field is absent.
+    Returns None if email is missing (invalid record).
     """
     stripe_event_type = event.get("type", "")
     obj = event.get("data", {}).get("object", {})
 
-    # Amount — Stripe stores cents; keep as-is (dashboard can format)
-    amount = (
-        obj.get("amount_total")       # checkout.session
-        or obj.get("amount")          # payment_intent
-        or obj.get("amount_due")      # invoice
-        or obj.get("plan", {}).get("amount", 0)   # subscription
-        or 0
-    )
+    email = obj.get("customer_details", {}).get("email", "") or ""
+    if not email:
+        print("Skipped invalid payment (no email)")
+        return None
 
-    currency = obj.get("currency", "")
-
-    # Customer email — present on checkout sessions and invoices directly
-    customer_email = (
-        obj.get("customer_email")
-        or obj.get("customer_details", {}).get("email", "")
-        or ""
-    )
-
-    customer_id = obj.get("customer", "")
+    session_id = obj.get("id", "")
+    amount = obj.get("amount_total", 0) or 0
 
     return {
-        "id":                event.get("id", ""),
-        "type":              _map_type(stripe_event_type),
+        "email":             email,
         "amount":            amount,
-        "currency":          currency,
-        "customer_email":    customer_email,
-        "customer_id":       customer_id,
-        "status":            "processed",
+        "timestamp":         datetime.now(timezone.utc).isoformat(),
+        "session_id":        session_id,
+        "type":              _map_type(stripe_event_type),
         "stripe_event_type": stripe_event_type,
-        "received_at":       datetime.now(timezone.utc).isoformat(),
     }
 
 
 # ── Deduplicate & save ────────────────────────────────────────────────────────
 
-def _load_seen_ids() -> set:
-    """Return set of all event ids already saved."""
+def _load_seen_session_ids() -> set:
+    """Return set of all session_ids already saved."""
     existing = read_json(EVENTS_FILE)
     if not isinstance(existing, list):
         return set()
-    return {e["id"] for e in existing if e.get("id")}
+    return {e["session_id"] for e in existing if e.get("session_id")}
 
 
 def _save_event(record: dict) -> None:
@@ -102,19 +86,52 @@ def handle_payment_event(event: dict) -> dict:
     Process a single Stripe event dict.
     Returns {"processed": 1, "skipped": 0} or {"processed": 0, "skipped": 1}.
     """
-    event_id = event.get("id", "")
-    event_type = event.get("type", "unknown")
-
-    if not event_id:
-        logging.warning("Received payment event with no id — skipping")
-        return {"processed": 0, "skipped": 1}
-
-    seen = _load_seen_ids()
-    if event_id in seen:
-        logging.info(f"Duplicate event {event_id} — skipped")
-        return {"processed": 0, "skipped": 1}
-
     record = _extract_fields(event)
+    if not record:
+        return {"processed": 0, "skipped": 1}
+
+    session_id = record.get("session_id", "")
+    seen = _load_seen_session_ids()
+    if session_id in seen:
+        print(f"Duplicate skipped: {session_id}")
+        return {"processed": 0, "skipped": 1}
+
     _save_event(record)
-    logging.info(f"Saved payment event {event_id} ({event_type}) → {EVENTS_FILE}")
+    print(f"Saved payment: {record['email']} {record['amount']}")
+
+    if (
+        record.get("type") == "payment_success"
+        and record.get("stripe_event_type") == "checkout.session.completed"
+    ):
+        from app.agents.payment_actions import run_payment_success
+        run_payment_success(record)
+
+    logging.info(f"Saved payment event {session_id} → {EVENTS_FILE}")
     return {"processed": 1, "skipped": 0}
+
+
+# ── Test ──────────────────────────────────────────────────────────────────────
+
+def simulate_checkout_event() -> None:
+    """Run a mock checkout.session.completed event through the full flow."""
+    mock_event = {
+        "id": "evt_test_001",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": "cs_test_session_001",
+                "amount_total": 999,
+                "customer_details": {
+                    "email": "test@example.com"
+                }
+            }
+        }
+    }
+
+    print("--- simulate_checkout_event: run 1 (expect save) ---")
+    result1 = handle_payment_event(mock_event)
+    print(result1)
+
+    print("--- simulate_checkout_event: run 2 (expect duplicate skip) ---")
+    result2 = handle_payment_event(mock_event)
+    print(result2)
