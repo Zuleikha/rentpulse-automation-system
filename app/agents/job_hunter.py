@@ -143,6 +143,15 @@ def run_job_hunt() -> dict:
 
     if jobs:
         _write_jobs_csv(jobs)
+        # Auto-import into tracker + notify for high-fit jobs.
+        # Runs only when job hunt is manually triggered — no scheduler involvement.
+        try:
+            from app.agents.job_tracker import add_to_tracker, notify_new_jobs
+            for job in jobs:
+                add_to_tracker(job)
+            notify_new_jobs(jobs)
+        except Exception as e:
+            logging.warning(f"Tracker/notify step skipped: {e}")
 
     logging.info(f"Job hunt complete: {total} real jobs saved to data/jobs/")
     return summary

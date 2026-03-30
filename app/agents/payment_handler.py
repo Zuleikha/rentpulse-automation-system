@@ -10,9 +10,7 @@ No Stripe SDK required — works entirely with the raw event dict.
 import logging
 from datetime import datetime, timezone
 
-from app.utils.local_storage import PAYMENTS_DIR, read_json, write_json
-
-EVENTS_FILE = PAYMENTS_DIR / "payment_events.json"
+from app.storage import save_payment
 
 # ── Stripe event type → simplified type ──────────────────────────────────────
 
@@ -60,25 +58,6 @@ def _extract_fields(event: dict) -> dict | None:
     }
 
 
-# ── Deduplicate & save ────────────────────────────────────────────────────────
-
-def _load_seen_session_ids() -> set:
-    """Return set of all session_ids already saved."""
-    existing = read_json(EVENTS_FILE)
-    if not isinstance(existing, list):
-        return set()
-    return {e["session_id"] for e in existing if e.get("session_id")}
-
-
-def _save_event(record: dict) -> None:
-    """Append one event record to the JSON array on disk."""
-    existing = read_json(EVENTS_FILE)
-    if not isinstance(existing, list):
-        existing = []
-    existing.append(record)
-    write_json(EVENTS_FILE, existing)
-
-
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def handle_payment_event(event: dict) -> dict:
@@ -90,13 +69,11 @@ def handle_payment_event(event: dict) -> dict:
     if not record:
         return {"processed": 0, "skipped": 1}
 
-    session_id = record.get("session_id", "")
-    seen = _load_seen_session_ids()
-    if session_id in seen:
-        print(f"Duplicate skipped: {session_id}")
+    saved = save_payment(record)
+    if not saved:
+        print(f"Duplicate skipped: {record.get('session_id', '')}")
         return {"processed": 0, "skipped": 1}
 
-    _save_event(record)
     print(f"Saved payment: {record['email']} {record['amount']}")
 
     if (
@@ -106,7 +83,7 @@ def handle_payment_event(event: dict) -> dict:
         from app.agents.payment_actions import run_payment_success
         run_payment_success(record)
 
-    logging.info(f"Saved payment event {session_id} → {EVENTS_FILE}")
+    logging.info(f"Saved payment event {record.get('session_id', '')} → storage")
     return {"processed": 1, "skipped": 0}
 
 

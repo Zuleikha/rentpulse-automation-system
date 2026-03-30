@@ -64,6 +64,16 @@ function readCsv(filePath) {
 
 // ---- Jobs data endpoint ----
 
+app.get("/api/data/jobs/tracker", (req, res) => {
+  const all = readJson(path.join(DATA_ROOT, "jobs", "job_applications.json"));
+  const list = Array.isArray(all) ? all : [];
+  res.json({
+    all:         list,
+    shortlisted: list.filter(j => j.shortlisted),
+    applied:     list.filter(j => ["applied", "interview", "offer"].includes(j.status)),
+  });
+});
+
 app.get("/api/data/jobs", (req, res) => {
   const dir = path.join(DATA_ROOT, "jobs");
   res.json({
@@ -83,6 +93,35 @@ app.get("/api/data/rentpulse", (req, res) => {
     competitors:   readJson(path.join(dir, "competitors.json")),
     content_ideas: readJson(path.join(dir, "content_ideas.json")),
   });
+});
+
+// ---- Payments data endpoint ----
+
+app.get("/api/data/payments", (req, res) => {
+  const events = readJson(path.join(DATA_ROOT, "payments", "payment_events.json"));
+  const payments = events
+    .filter(e => e.type === "payment_success")
+    .map(e => ({
+      email:      e.customer_email || "",
+      amount:     e.amount,
+      timestamp:  e.received_at || "",
+      session_id: e.id || "",
+    }));
+  res.json({ payments });
+});
+
+// ---- Customers data endpoint ----
+
+app.get("/api/data/customers", (req, res) => {
+  const customers = readJson(path.join(DATA_ROOT, "customers", "customers.json"));
+  res.json({ customers });
+});
+
+// ---- Support tickets data endpoint ----
+
+app.get("/api/data/support", (req, res) => {
+  const tickets = readJson(path.join(DATA_ROOT, "support", "support_tickets.json"));
+  res.json({ tickets });
 });
 
 app.listen(3001, () => console.log("Proxy running on port 3001"));

@@ -13,6 +13,9 @@ JOBS_DIR = DATA_DIR / "jobs"
 RENTPULSE_DIR = DATA_DIR / "rentpulse"
 SUPPORT_DIR = DATA_DIR / "support"
 PAYMENTS_DIR = DATA_DIR / "payments"
+CUSTOMERS_DIR = DATA_DIR / "customers"
+
+TRACKER_FILE = JOBS_DIR / "job_applications.json"
 
 
 def ensure_dirs() -> None:
@@ -20,6 +23,7 @@ def ensure_dirs() -> None:
     RENTPULSE_DIR.mkdir(parents=True, exist_ok=True)
     SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
     PAYMENTS_DIR.mkdir(parents=True, exist_ok=True)
+    CUSTOMERS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---- JSON helpers ----

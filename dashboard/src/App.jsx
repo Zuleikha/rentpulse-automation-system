@@ -484,6 +484,130 @@ function JobHuntingSection({ data, loading, onRefresh }) {
   );
 }
 
+// ============================================================
+// JOB TRACKER SECTION
+// ============================================================
+
+const STATUS_COLORS = {
+  saved:      { bg: "#f1f5f9", text: "#475569" },
+  applied:    { bg: "#dbeafe", text: "#1d4ed8" },
+  interview:  { bg: "#fef9c3", text: "#a16207" },
+  rejected:   { bg: "#fee2e2", text: "#b91c1c" },
+  offer:      { bg: "#dcfce7", text: "#15803d" },
+  closed:     { bg: "#f1f5f9", text: "#94a3b8" },
+};
+
+function StatusBadge({ status }) {
+  const c = STATUS_COLORS[status] || STATUS_COLORS.saved;
+  return (
+    <span style={{ background: c.bg, color: c.text, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+      {status || "saved"}
+    </span>
+  );
+}
+
+function TrackerTable({ rows, emptyMsg }) {
+  if (!rows || rows.length === 0) {
+    return <EmptyState message={emptyMsg} command="python run_job_tracker.py import-jobs" />;
+  }
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead>
+          <tr style={{ background: "#f8fafc" }}>
+            {["SL", "Status", "Fit", "CV Match", "Title", "Company", "Applied", "Link"].map(h => (
+              <th key={h} style={{ padding: "6px 8px", textAlign: "left", fontWeight: 700, color: "#374151", borderBottom: "1.5px solid #e2e8f0", whiteSpace: "nowrap" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((e, i) => (
+            <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <td style={{ padding: "7px 8px", textAlign: "center" }}>{e.shortlisted ? "★" : ""}</td>
+              <td style={{ padding: "7px 8px" }}><StatusBadge status={e.status} /></td>
+              <td style={{ padding: "7px 8px" }}><FitBadge score={e.fit_score} /></td>
+              <td style={{ padding: "7px 8px" }}><FitBadge score={e.cv_match_score} /></td>
+              <td style={{ padding: "7px 8px", fontWeight: 600, color: "#1a1a1a", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</td>
+              <td style={{ padding: "7px 8px", color: "#374151" }}>{e.company}</td>
+              <td style={{ padding: "7px 8px", color: "#64748b", whiteSpace: "nowrap" }}>{e.date_applied || "—"}</td>
+              <td style={{ padding: "7px 8px" }}>
+                {e.job_url
+                  ? <a href={e.job_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>Open</a>
+                  : <span style={{ color: "#94a3b8" }}>—</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function JobTrackerSection({ data, loading, onRefresh }) {
+  const [trackerTab, setTrackerTab] = useState("all");
+
+  if (loading) {
+    return <div style={{ padding: 32, textAlign: "center", color: "#64748b", fontSize: 14 }}>Loading tracker...</div>;
+  }
+
+  const all         = data?.all || [];
+  const shortlisted = data?.shortlisted || [];
+  const applied     = data?.applied || [];
+
+  const views = { all, shortlisted, applied };
+  const activeRows = views[trackerTab] || [];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Application Tracker</h2>
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 4, marginBottom: 0 }}>
+            Tracked jobs with status, fit score, and CV match score
+          </p>
+        </div>
+        <DataRefreshBar loading={loading} onRefresh={onRefresh} />
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", flex: 1 }}>
+          <StatBox label="Tracked" value={all.length} />
+          <StatBox label="Shortlisted" value={shortlisted.length} />
+          <StatBox label="Applied / Active" value={applied.length} />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {[["all", "All"], ["shortlisted", "Shortlisted ★"], ["applied", "Applied / Active"]].map(([key, label]) => (
+          <button key={key} onClick={() => setTrackerTab(key)} style={subTabStyle(trackerTab === key)}>
+            {label} {views[key].length > 0 && `(${views[key].length})`}
+          </button>
+        ))}
+      </div>
+
+      <PanelCard title={trackerTab === "all" ? "All Tracked Jobs" : trackerTab === "shortlisted" ? "Shortlisted Jobs" : "Applied / Active Jobs"} count={activeRows.length || undefined}>
+        <TrackerTable
+          rows={activeRows}
+          emptyMsg={
+            trackerTab === "all"
+              ? "No tracked jobs yet. Run: python run_job_tracker.py import-jobs"
+              : trackerTab === "shortlisted"
+              ? "No shortlisted jobs. Use: python run_job_tracker.py shortlist <url>"
+              : "No active applications. Use: python run_job_tracker.py apply <url>"
+          }
+        />
+      </PanelCard>
+
+      <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>
+        <strong>CLI helpers:</strong>{" "}
+        <code style={{ background: "#f1f5f9", padding: "1px 6px", borderRadius: 3 }}>python run_job_tracker.py import-jobs</code>{" · "}
+        <code style={{ background: "#f1f5f9", padding: "1px 6px", borderRadius: 3 }}>python run_job_tracker.py shortlist &lt;url&gt;</code>{" · "}
+        <code style={{ background: "#f1f5f9", padding: "1px 6px", borderRadius: 3 }}>python run_job_tracker.py apply &lt;url&gt;</code>
+      </div>
+    </div>
+  );
+}
+
 function StatBox({ label, value }) {
   return (
     <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 7, padding: "12px 18px", minWidth: 100, textAlign: "center" }}>
@@ -863,14 +987,23 @@ export default function App() {
   const [agentStatus, setAgentStatus] = useState("idle");
 
   // ---- Navigation state ----
-  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs"
+  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs" | "payments" | "customers" | "support"
   const [rpTab, setRpTab] = useState("social");           // "social" | "research"
+  const [jobsTab, setJobsTab] = useState("search");       // "search" | "tracker"
 
   // ---- Local data state ----
   const [jobsData, setJobsData] = useState(null);
+  const [trackerData, setTrackerData] = useState(null);
   const [rentpulseData, setRentpulseData] = useState(null);
+  const [paymentsData, setPaymentsData] = useState(null);
+  const [customersData, setCustomersData] = useState(null);
+  const [supportData, setSupportData] = useState(null);
   const [jobsLoading, setJobsLoading] = useState(false);
+  const [trackerLoading, setTrackerLoading] = useState(false);
   const [researchLoading, setResearchLoading] = useState(false);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [supportLoading, setSupportLoading] = useState(false);
 
   // ---- Init: restore posted state + start social agent ----
   useEffect(() => {
@@ -888,11 +1021,19 @@ export default function App() {
   // ---- Load local data when switching sections ----
   useEffect(() => {
     if (section === "jobs" && !jobsData) loadJobsData();
+    if (section === "payments" && !paymentsData) loadPaymentsData();
+    if (section === "customers" && !customersData) loadCustomersData();
+    if (section === "support" && !supportData) loadSupportData();
+    if (section === "jobs" && jobsTab === "tracker" && !trackerData) loadTrackerData();
   }, [section]);
 
   useEffect(() => {
     if (section === "rentpulse" && rpTab === "research" && !rentpulseData) loadRentpulseData();
   }, [section, rpTab]);
+
+  useEffect(() => {
+    if (section === "jobs" && jobsTab === "tracker" && !trackerData) loadTrackerData();
+  }, [section, jobsTab]);
 
   // ---- Data loaders ----
   const loadJobsData = async () => {
@@ -907,6 +1048,18 @@ export default function App() {
     }
   };
 
+  const loadTrackerData = async () => {
+    setTrackerLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/jobs/tracker`);
+      setTrackerData(await res.json());
+    } catch {
+      setTrackerData({ all: [], shortlisted: [], applied: [] });
+    } finally {
+      setTrackerLoading(false);
+    }
+  };
+
   const loadRentpulseData = async () => {
     setResearchLoading(true);
     try {
@@ -916,6 +1069,42 @@ export default function App() {
       setRentpulseData({ leads: [], complaints: [], competitors: [], content_ideas: [] });
     } finally {
       setResearchLoading(false);
+    }
+  };
+
+  const loadPaymentsData = async () => {
+    setPaymentsLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/payments`);
+      setPaymentsData(await res.json());
+    } catch {
+      setPaymentsData({ payments: [] });
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const loadCustomersData = async () => {
+    setCustomersLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/customers`);
+      setCustomersData(await res.json());
+    } catch {
+      setCustomersData({ customers: [] });
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  const loadSupportData = async () => {
+    setSupportLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/support`);
+      setSupportData(await res.json());
+    } catch {
+      setSupportData({ tickets: [] });
+    } finally {
+      setSupportLoading(false);
     }
   };
 
@@ -1085,6 +1274,15 @@ export default function App() {
         <button onClick={() => setSection("jobs")} style={sectionTabStyle(section === "jobs")}>
           Job Hunting
         </button>
+        <button onClick={() => setSection("payments")} style={sectionTabStyle(section === "payments")}>
+          Payments
+        </button>
+        <button onClick={() => setSection("customers")} style={sectionTabStyle(section === "customers")}>
+          Customers
+        </button>
+        <button onClick={() => setSection("support")} style={sectionTabStyle(section === "support")}>
+          Support
+        </button>
       </div>
 
       {/* ---- RENTPULSE SECTION ---- */}
@@ -1133,11 +1331,144 @@ export default function App() {
 
       {/* ---- JOB HUNTING SECTION ---- */}
       {section === "jobs" && (
-        <JobHuntingSection
-          data={jobsData}
-          loading={jobsLoading}
-          onRefresh={() => { setJobsData(null); loadJobsData(); }}
-        />
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            <button onClick={() => setJobsTab("search")} style={subTabStyle(jobsTab === "search")}>
+              Job Search
+            </button>
+            <button onClick={() => setJobsTab("tracker")} style={subTabStyle(jobsTab === "tracker")}>
+              Application Tracker
+            </button>
+          </div>
+          {jobsTab === "search" && (
+            <JobHuntingSection
+              data={jobsData}
+              loading={jobsLoading}
+              onRefresh={() => { setJobsData(null); loadJobsData(); }}
+            />
+          )}
+          {jobsTab === "tracker" && (
+            <JobTrackerSection
+              data={trackerData}
+              loading={trackerLoading}
+              onRefresh={() => { setTrackerData(null); loadTrackerData(); }}
+            />
+          )}
+        </>
+      )}
+
+      {/* ---- PAYMENTS SECTION ---- */}
+      {section === "payments" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Payments</h2>
+            <button onClick={() => { setPaymentsData(null); loadPaymentsData(); }} style={{ fontSize: 12, padding: "4px 10px", cursor: "pointer" }}>
+              Refresh
+            </button>
+          </div>
+          {paymentsLoading && <p style={{ color: "#64748b" }}>Loading...</p>}
+          {!paymentsLoading && paymentsData && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Email</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Amount</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Timestamp</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Session ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentsData.payments.length === 0 && (
+                  <tr><td colSpan={4} style={{ padding: "12px 10px", color: "#94a3b8" }}>No payments found.</td></tr>
+                )}
+                {paymentsData.payments.map((p, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "7px 10px" }}>{p.email || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>${(p.amount / 100).toFixed(2)}</td>
+                    <td style={{ padding: "7px 10px" }}>{p.timestamp ? new Date(p.timestamp).toLocaleString() : "—"}</td>
+                    <td style={{ padding: "7px 10px", fontSize: 11, color: "#64748b", wordBreak: "break-all" }}>{p.session_id || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ---- CUSTOMERS SECTION ---- */}
+      {section === "customers" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Customers</h2>
+            <button onClick={() => { setCustomersData(null); loadCustomersData(); }} style={{ fontSize: 12, padding: "4px 10px", cursor: "pointer" }}>
+              Refresh
+            </button>
+          </div>
+          {customersLoading && <p style={{ color: "#64748b" }}>Loading...</p>}
+          {!customersLoading && customersData && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Email</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Amount</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customersData.customers.length === 0 && (
+                  <tr><td colSpan={3} style={{ padding: "12px 10px", color: "#94a3b8" }}>No customers found.</td></tr>
+                )}
+                {customersData.customers.map((c, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "7px 10px" }}>{c.email || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>${(c.amount / 100).toFixed(2)}</td>
+                    <td style={{ padding: "7px 10px" }}>{c.timestamp ? new Date(c.timestamp).toLocaleString() : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ---- SUPPORT SECTION ---- */}
+      {section === "support" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Support Tickets</h2>
+            <button onClick={() => { setSupportData(null); loadSupportData(); }} style={{ fontSize: 12, padding: "4px 10px", cursor: "pointer" }}>
+              Refresh
+            </button>
+          </div>
+          {supportLoading && <p style={{ color: "#64748b" }}>Loading...</p>}
+          {!supportLoading && supportData && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Sender</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Category</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Priority</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Sentiment</th>
+                  <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {supportData.tickets.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: "12px 10px", color: "#94a3b8" }}>No support tickets found.</td></tr>
+                )}
+                {supportData.tickets.map((t, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "7px 10px" }}>{t.sender || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>{t.category || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>{t.priority || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>{t.sentiment || "—"}</td>
+                    <td style={{ padding: "7px 10px" }}>{t.date || t.triaged_at || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
     </div>
   );

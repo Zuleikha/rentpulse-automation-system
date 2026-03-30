@@ -1,33 +1,27 @@
-import json
-from pathlib import Path
-from datetime import datetime
+"""
+Customer store — thin adapter layer.
 
-CUSTOMERS_FILE = Path("data/customers/customers.json")
+Callers (e.g. payment_actions.py) pass a record with 'customer_email'.
+This module maps that to the storage interface which uses 'email'.
+
+Storage logic (deduplication, JSON read/write) lives in app.storage.
+"""
+from app.storage import save_customer as _storage_save_customer
+
 
 def save_customer(record: dict) -> None:
+    """
+    Accept a payment record and persist the customer.
+    Maps 'customer_email' to 'email' before calling storage.
+    Silently skips on empty email or duplicate (matches original behaviour).
+    """
     try:
-        email = record.get("customer_email", "")
+        email = record.get("customer_email", "") or record.get("email", "")
         if not email:
             return
-
-        CUSTOMERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-        if CUSTOMERS_FILE.exists():
-            with open(CUSTOMERS_FILE, "r") as f:
-                data = json.load(f)
-        else:
-            data = []
-
-        entry = {
-            "email": email,
+        _storage_save_customer({
+            "email":  email,
             "amount": record.get("amount", 0),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-        data.append(entry)
-
-        with open(CUSTOMERS_FILE, "w") as f:
-            json.dump(data, f, indent=2)
-
+        })
     except Exception:
         pass
