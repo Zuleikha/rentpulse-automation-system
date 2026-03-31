@@ -1,6 +1,6 @@
 # Project Roadmap
 
-**Last updated:** 2026-03-30
+**Last updated:** 2026-03-31
 **Project:** RentPulse Automation System
 **Status:** Local build complete — pre-deployment
 
@@ -49,9 +49,10 @@ rentpulse-social-bot/
 │   │   └── timing.py            — posting schedule logic
 │   │
 │   ├── storage/             # Storage abstraction layer
-│   │   ├── __init__.py          — public interface (4 functions)
+│   │   ├── __init__.py          — public interface (7 functions)
 │   │   ├── payments.py          — JSON implementation: save_payment, get_payments
-│   │   └── customers.py         — JSON implementation: save_customer, get_customers
+│   │   ├── customers.py         — JSON implementation: save_customer, get_customers
+│   │   └── users.py             — JSON implementation: save_user, get_users, update_user
 │   │
 │   ├── utils/
 │   │   ├── local_storage.py     — path constants + JSON/CSV helpers
@@ -126,6 +127,13 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 - [x] `save_payment` / `get_payments` / `save_customer` / `get_customers` — clean interface
 - [x] JSON backend isolated — agents no longer read/write files directly
 - [x] `payment_handler.py` and `customer_store.py` refactored to use storage interface
+- [x] `save_user` / `get_users` / `update_user` added — user account storage (`data/users/users.json`)
+
+### User accounts (scaffolding — local only)
+- [x] User record model: `user_id`, `email`, `created_at`, `premium_status`, `linked_payment_session_ids`, `notes`
+- [x] `app/agents/user_linker.py` — `create_user_if_missing`, `link_payment_to_user`, `get_user_by_email`, `get_user_payments`
+- [x] Payment success flow calls `link_payment_to_user` — skips safely on blank email or duplicate session
+- [x] `tests/test_user_linking.py` — isolated local test showing full payment → user created → session linked flow
 
 ### Dashboard
 - [x] Express proxy server (`server.cjs`) with local data API
@@ -147,15 +155,15 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 
 ## SECTION 4: Current Position
 
-The system is fully built and functional in local/build mode. Every subsystem — job hunting, support triage, payments, customer storage, social media automation, and the dashboard — is implemented and wired together. The storage layer has been abstracted so that swapping from JSON to a database requires changing two import lines. No automation is running: all agents are triggered manually via CLI runners, and no schedulers, triggers, or cron jobs are active. The system is ready for the next phase: connecting payments to user accounts, adding access control, and deploying to a persistent environment.
+The system is fully built and functional in local/build mode. Every subsystem — job hunting, support triage, payments, customer storage, user accounts, social media automation, and the dashboard — is implemented and wired together. The storage layer has been abstracted so that swapping from JSON to a database requires changing two import lines. User account records are now created and linked to payment sessions automatically on payment success. No automation is running: all agents are triggered manually via CLI runners, and no schedulers, triggers, or cron jobs are active.
 
 ---
 
 ## SECTION 5: Next Steps
 
-1. **Link payments to user accounts** — associate a `customer_id` or `email` with access permissions after a successful payment
-2. **Premium gating** — restrict access to certain features (alerts, tracker, CV matching) based on payment status
-3. **Database migration (Supabase)** — implement `app/storage/supabase_backend.py` with the same four function signatures and swap the import in `app/storage/__init__.py`
+1. ~~**Link payments to user accounts**~~ — done: `user_linker.py` scaffolding complete
+2. **Premium gating** — restrict access to certain features (alerts, tracker, CV matching) based on `premium_status` field in user record
+3. **Database migration (Supabase)** — implement `app/storage/supabase_backend.py` with the same seven function signatures and swap the import in `app/storage/__init__.py`
 4. **`render.yaml`** — define services, environment variables, and build commands for Render deployment
 5. **Production deployment** — deploy webhook listener and scheduler to Render; point Stripe webhook URL to live endpoint
 
@@ -187,3 +195,35 @@ The system is fully built and functional in local/build mode. Every subsystem �
 - [ ] User authentication
 - [ ] Multi-tenant support (multiple products beyond RentPulse)
 - [ ] Admin dashboard view (metrics, health checks)
+
+---
+
+## SECTION 7: Recent Updates
+
+### 2026-03-31 — Payment-to-user linking scaffolding
+
+Added local-only user account model and linking layer. No automation enabled.
+
+**New files:**
+- `app/storage/users.py` — JSON-backed user storage (`save_user`, `get_users`, `update_user`)
+- `app/agents/user_linker.py` — linking functions (`create_user_if_missing`, `link_payment_to_user`, `get_user_by_email`, `get_user_payments`)
+- `data/users/users.json` — created on first run
+- `tests/test_user_linking.py` — isolated local test (uses temp dir, no data file side-effects)
+
+**Modified files:**
+- `app/utils/local_storage.py` — added `USERS_DIR` path constant and `ensure_dirs()` entry
+- `app/storage/__init__.py` — exports extended to include user functions
+- `app/agents/payment_actions.py` — calls `link_payment_to_user` after customer save (safe: skips on blank email or duplicate session)
+- `docs/PROJECT_ROADMAP.md` — this update
+
+**What is now ready:**
+- User record created automatically on first payment success
+- Payment session ID linked to user, `premium_status` set to `True`
+- All functions are local and testable with no external dependencies
+- Storage layer is Supabase-swap-ready (implement 7 functions, change 3 import lines)
+
+**What is still missing before real premium access works:**
+- Premium gating logic (check `premium_status` before serving restricted features)
+- User authentication / session tokens
+- Dashboard UI for viewing user/premium status
+- Supabase migration (optional — JSON backend is functional)
