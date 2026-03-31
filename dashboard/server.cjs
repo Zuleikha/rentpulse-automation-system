@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 const fetch = (...args) => import("node-fetch").then(({default: fetch}) => fetch(...args));
 require("dotenv").config();
 
@@ -34,6 +35,64 @@ app.post("/api/messages", async (req, res) => {
 // ---- Local data file helpers ----
 
 const DATA_ROOT = path.join(__dirname, "..", "data");
+const PROJECT_ROOT = path.join(__dirname, "..");
+const RUNS_FILE = path.join(DATA_ROOT, "runs", "run_log.json");
+
+// ---- Run log helpers ----
+
+function readRunLog() {
+  try {
+    if (!fs.existsSync(RUNS_FILE)) return {};
+    return JSON.parse(fs.readFileSync(RUNS_FILE, "utf-8"));
+  } catch { return {}; }
+}
+
+function setRunStatus(project, fields) {
+  const dir = path.dirname(RUNS_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const log = readRunLog();
+  log[project] = { project, ...fields };
+  fs.writeFileSync(RUNS_FILE, JSON.stringify(log, null, 2));
+}
+
+// ---- Run script helper ----
+// Spawns a Python runner, writes status to run_log.json, returns a Promise.
+
+function runScript(project, script) {
+  return new Promise((resolve) => {
+    const started_at = new Date().toISOString();
+    setRunStatus(project, { started_at, finished_at: null, status: "running", message: "" });
+    console.log(`[run] starting ${project} (${script})`);
+
+    const proc = spawn("python", [script], {
+      cwd: PROJECT_ROOT,
+      env: { ...process.env },
+      shell: false,
+    });
+
+    let out = "";
+    let err = "";
+    proc.stdout.on("data", (d) => { out += d.toString(); });
+    proc.stderr.on("data", (d) => { err += d.toString(); });
+
+    proc.on("close", (code) => {
+      const finished_at = new Date().toISOString();
+      const status = code === 0 ? "success" : "failed";
+      const combined = (out + "\n" + err).trim();
+      const message = combined.slice(-500).trim();
+      setRunStatus(project, { started_at, finished_at, status, message });
+      console.log(`[run] ${project} → ${status} (exit ${code})`);
+      resolve({ project, status, code });
+    });
+
+    proc.on("error", (e) => {
+      const finished_at = new Date().toISOString();
+      setRunStatus(project, { started_at, finished_at, status: "failed", message: e.message });
+      console.error(`[run] ${project} spawn error:`, e.message);
+      resolve({ project, status: "failed", code: -1 });
+    });
+  });
+}
 
 function readJson(filePath) {
   try {
@@ -122,6 +181,39 @@ app.get("/api/data/customers", (req, res) => {
 app.get("/api/data/support", (req, res) => {
   const tickets = readJson(path.join(DATA_ROOT, "support", "support_tickets.json"));
   res.json({ tickets });
+});
+
+// ---- Run control routes ----
+// Each route responds immediately (started: true) then runs the agent in the
+// background. Poll GET /api/data/runs to check current status.
+
+app.post("/api/run/rentpulse", (req, res) => {
+  res.json({ started: true, project: "rentpulse" });
+  runScript("rentpulse", "run_rentpulse_research.py");
+});
+
+app.post("/api/run/job-hunt", (req, res) => {
+  res.json({ started: true, project: "job-hunt" });
+  runScript("job-hunt", "run_job_hunt.py");
+});
+
+app.post("/api/run/support", (req, res) => {
+  res.json({ started: true, project: "support" });
+  runScript("support", "run_support_triage.py");
+});
+
+app.post("/api/run/all", async (req, res) => {
+  res.json({ started: true, project: "all" });
+  // Sequential: each agent waits for the previous to finish.
+  await runScript("rentpulse", "run_rentpulse_research.py");
+  await runScript("job-hunt", "run_job_hunt.py");
+  await runScript("support", "run_support_triage.py");
+});
+
+// ---- Run status endpoint ----
+
+app.get("/api/data/runs", (req, res) => {
+  res.json(readRunLog());
 });
 
 app.listen(3001, () => console.log("Proxy running on port 3001"));

@@ -227,3 +227,29 @@ Added local-only user account model and linking layer. No automation enabled.
 - User authentication / session tokens
 - Dashboard UI for viewing user/premium status
 - Supabase migration (optional — JSON backend is functional)
+
+### 2026-03-31 — Manual dashboard run controls
+
+Added a Run Controls tab to the dashboard. Agents can now be triggered by clicking a button — no automation, no scheduler, no always-on processes.
+
+**New files:**
+- `data/runs/run_log.json` — created on first run; stores one status entry per agent
+
+**Modified files:**
+- `dashboard/server.cjs` — added `POST /api/run/rentpulse`, `/api/run/job-hunt`, `/api/run/support`, `/api/run/all`; added `GET /api/data/runs`; added `runScript()` helper using Node.js `child_process.spawn`
+- `dashboard/src/App.jsx` — added `RunControlsSection` component, `RunStatusBadge`, `RUN_API` constant, `runsData`/`running` state, `loadRunsData`, `triggerRun`, `triggerRunAll` functions, "Run Controls" nav tab
+
+**What each button does:**
+- **Run RentPulse** → spawns `python run_rentpulse_research.py`
+- **Run Job Hunt** → spawns `python run_job_hunt.py`
+- **Run Support** → spawns `python run_support_triage.py`
+- **Run All** → runs all three in sequence (each waits for previous to finish)
+
+**Run status structure** (`data/runs/run_log.json`):
+```json
+{
+  "rentpulse": { "project": "rentpulse", "started_at": "...", "finished_at": "...", "status": "success", "message": "..." }
+}
+```
+
+Status values: `running` | `success` | `failed`

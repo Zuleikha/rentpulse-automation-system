@@ -121,6 +121,7 @@ If no news found return exactly: {"hasNews":false,"headline":"","summary":"","ur
 
 const API = "http://localhost:3001/api/messages";
 const DATA_API = "http://localhost:3001/api/data";
+const RUN_API = "http://localhost:3001/api/run";
 const RECENT_POSTS_STORAGE_KEY = "rp_recent_posts_v3";
 const MAX_RECENT_POSTS = 20;
 
@@ -969,6 +970,145 @@ function SocialMediaSection({ today, todayName, todayPlatforms, posts, done, cop
 }
 
 // ============================================================
+// RUN CONTROLS SECTION
+// ============================================================
+
+const RUN_PROJECTS = [
+  {
+    key: "rentpulse",
+    label: "RentPulse Research",
+    description: "Finds leads, complaints, competitors, and content ideas",
+    endpoint: "/rentpulse",
+  },
+  {
+    key: "job-hunt",
+    label: "Job Hunt",
+    description: "Searches for AI/ML and software roles in Ireland",
+    endpoint: "/job-hunt",
+  },
+  {
+    key: "support",
+    label: "Support Triage",
+    description: "Fetches Gmail messages and classifies support tickets",
+    endpoint: "/support",
+  },
+];
+
+function RunStatusBadge({ status }) {
+  const map = {
+    running:   { bg: "#fef9c3", text: "#a16207", label: "Running…" },
+    success:   { bg: "#dcfce7", text: "#15803d", label: "Success" },
+    failed:    { bg: "#fee2e2", text: "#b91c1c", label: "Failed" },
+  };
+  const c = map[status] || { bg: "#f1f5f9", text: "#64748b", label: "Never run" };
+  return (
+    <span style={{ background: c.bg, color: c.text, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, textTransform: "uppercase" }}>
+      {c.label}
+    </span>
+  );
+}
+
+function RunControlsSection({ runsData, loading, running, onRun, onRunAll, onRefresh }) {
+  const anyRunning = Object.values(running).some(Boolean);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Run Controls</h2>
+          <p style={{ color: "#64748b", fontSize: 13, marginTop: 4, marginBottom: 0 }}>
+            Trigger agents manually. Runs only when you click — no automation.
+          </p>
+        </div>
+        <DataRefreshBar loading={loading} onRefresh={onRefresh} />
+      </div>
+
+      {/* Run All */}
+      <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "14px 16px", marginBottom: 20, background: "#f8fafc" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Run All Agents</div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>Runs RentPulse → Job Hunt → Support in sequence</div>
+          </div>
+          <button
+            onClick={onRunAll}
+            disabled={anyRunning}
+            style={{
+              padding: "7px 18px", borderRadius: 6, fontWeight: 700, fontSize: 13,
+              border: "none",
+              background: anyRunning ? "#e2e8f0" : "#1e40af",
+              color: anyRunning ? "#94a3b8" : "#fff",
+              cursor: anyRunning ? "not-allowed" : "pointer",
+            }}
+          >
+            {anyRunning ? "Running…" : "Run All"}
+          </button>
+        </div>
+      </div>
+
+      {/* Individual project cards */}
+      {RUN_PROJECTS.map(({ key, label, description }) => {
+        const run = runsData?.[key];
+        const isRunning = running[key];
+        return (
+          <PanelCard key={key} title={label}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>{description}</p>
+              <button
+                onClick={() => onRun(key)}
+                disabled={anyRunning}
+                style={{
+                  flexShrink: 0, padding: "6px 16px", borderRadius: 6, fontWeight: 700, fontSize: 12,
+                  border: "1.5px solid #2563eb",
+                  background: anyRunning ? "#f1f5f9" : "#fff",
+                  color: anyRunning ? "#94a3b8" : "#2563eb",
+                  cursor: anyRunning ? "not-allowed" : "pointer",
+                }}
+              >
+                {isRunning ? "Running…" : "Run"}
+              </button>
+            </div>
+
+            {run && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+                  <RunStatusBadge status={run.status} />
+                  {run.started_at && (
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      Started {new Date(run.started_at).toLocaleTimeString()}
+                    </span>
+                  )}
+                  {run.finished_at && (
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      · Finished {new Date(run.finished_at).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+                {run.message && (
+                  <pre style={{
+                    margin: 0, background: run.status === "failed" ? "#fff5f5" : "#f8fafc",
+                    border: `1px solid ${run.status === "failed" ? "#fecaca" : "#e2e8f0"}`,
+                    borderRadius: 5, padding: "8px 10px", fontSize: 11,
+                    color: run.status === "failed" ? "#b91c1c" : "#374151",
+                    whiteSpace: "pre-wrap", maxHeight: 90, overflow: "auto",
+                  }}>
+                    {run.message}
+                  </pre>
+                )}
+              </div>
+            )}
+
+            {!run && (
+              <div style={{ marginTop: 10, fontSize: 12, color: "#94a3b8" }}>Not run yet this session.</div>
+            )}
+          </PanelCard>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
 // ROOT APP
 // ============================================================
 
@@ -987,7 +1127,7 @@ export default function App() {
   const [agentStatus, setAgentStatus] = useState("idle");
 
   // ---- Navigation state ----
-  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs" | "payments" | "customers" | "support"
+  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs" | "payments" | "customers" | "support" | "runs"
   const [rpTab, setRpTab] = useState("social");           // "social" | "research"
   const [jobsTab, setJobsTab] = useState("search");       // "search" | "tracker"
 
@@ -1004,6 +1144,9 @@ export default function App() {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [customersLoading, setCustomersLoading] = useState(false);
   const [supportLoading, setSupportLoading] = useState(false);
+  const [runsData, setRunsData] = useState(null);
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [running, setRunning] = useState({ rentpulse: false, "job-hunt": false, support: false });
 
   // ---- Init: restore posted state + start social agent ----
   useEffect(() => {
@@ -1025,6 +1168,7 @@ export default function App() {
     if (section === "customers" && !customersData) loadCustomersData();
     if (section === "support" && !supportData) loadSupportData();
     if (section === "jobs" && jobsTab === "tracker" && !trackerData) loadTrackerData();
+    if (section === "runs" && !runsData) loadRunsData();
   }, [section]);
 
   useEffect(() => {
@@ -1105,6 +1249,43 @@ export default function App() {
       setSupportData({ tickets: [] });
     } finally {
       setSupportLoading(false);
+    }
+  };
+
+  const loadRunsData = async () => {
+    setRunsLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/runs`);
+      setRunsData(await res.json());
+    } catch {
+      setRunsData({});
+    } finally {
+      setRunsLoading(false);
+    }
+  };
+
+  const triggerRun = async (project) => {
+    setRunning((prev) => ({ ...prev, [project]: true }));
+    try {
+      await fetch(`${RUN_API}/${project}`, { method: "POST" });
+      // Small delay then refresh so the "running" status shows up
+      setTimeout(() => loadRunsData(), 800);
+    } catch (e) {
+      console.error("[run]", project, e.message);
+    } finally {
+      setRunning((prev) => ({ ...prev, [project]: false }));
+    }
+  };
+
+  const triggerRunAll = async () => {
+    setRunning({ rentpulse: true, "job-hunt": true, support: true });
+    try {
+      await fetch(`${RUN_API}/all`, { method: "POST" });
+      setTimeout(() => loadRunsData(), 800);
+    } catch (e) {
+      console.error("[run] all", e.message);
+    } finally {
+      setRunning({ rentpulse: false, "job-hunt": false, support: false });
     }
   };
 
@@ -1283,6 +1464,9 @@ export default function App() {
         <button onClick={() => setSection("support")} style={sectionTabStyle(section === "support")}>
           Support
         </button>
+        <button onClick={() => setSection("runs")} style={sectionTabStyle(section === "runs")}>
+          Run Controls
+        </button>
       </div>
 
       {/* ---- RENTPULSE SECTION ---- */}
@@ -1429,6 +1613,18 @@ export default function App() {
             </table>
           )}
         </div>
+      )}
+
+      {/* ---- RUN CONTROLS SECTION ---- */}
+      {section === "runs" && (
+        <RunControlsSection
+          runsData={runsData}
+          loading={runsLoading}
+          running={running}
+          onRun={triggerRun}
+          onRunAll={triggerRunAll}
+          onRefresh={() => { setRunsData(null); loadRunsData(); }}
+        />
       )}
 
       {/* ---- SUPPORT SECTION ---- */}
