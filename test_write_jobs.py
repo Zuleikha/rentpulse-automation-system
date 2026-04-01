@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-output = Path(r"D:\rentfast\IrelandRentPulse\rentpulse-social-bot\data\jobs\jobs.json")
+output = Path(__file__).parent / "data" / "jobs" / "jobs.json"
 
 jobs = [
     {

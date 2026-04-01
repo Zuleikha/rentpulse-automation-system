@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import subprocess
 
-output = Path(r"D:\rentfast\IrelandRentPulse\rentpulse-social-bot\data\jobs\jobs.json")
+output = Path(__file__).parent / "data" / "jobs" / "jobs.json"
 
 prompt = """
 Search for job listings posted in the last 24 hours.

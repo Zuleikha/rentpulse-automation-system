@@ -21,7 +21,7 @@ This system is a local automation assistant built around **RentPulse**, a Chrome
 ## SECTION 2: Architecture
 
 ```
-rentpulse-social-bot/
+rentpulse-automation-system/
 │
 ├── app/
 │   ├── access/              # Premium access gate
