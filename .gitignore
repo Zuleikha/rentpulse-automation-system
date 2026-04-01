@@ -10,3 +10,5 @@ __pycache__/
 dist/
 .pytest_cache/
 app/mainold.py
+app/research/insights_cache.json
+dashboard/working_app.txt
