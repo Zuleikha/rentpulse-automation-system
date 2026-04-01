@@ -29,6 +29,10 @@ Rules:
 - Return valid JSON arrays only — no markdown, no preamble, no trailing text
 """
 
+# Tasks that require premium access when called with a user email.
+# Scheduler calls (no email) bypass this gate and run all tasks.
+PREMIUM_RESEARCH_TASKS: set = {"leads", "competitors"}
+
 RESEARCH_TASKS = {
     "leads": {
         "prompt": """
@@ -169,12 +173,26 @@ Return 10 to 15 ideas grounded in what you actually found.
 }
 
 
-def run_research_task(task_name: str) -> list:
-    """Run a single named research task with live web search and save results."""
+def run_research_task(task_name: str, email: str = "") -> list:
+    """
+    Run a single named research task with live web search and save results.
+
+    If email is provided and the task is in PREMIUM_RESEARCH_TASKS, the call
+    is gated — free users get an empty list. Scheduler calls (no email) skip
+    the gate and always run.
+    """
     task = RESEARCH_TASKS.get(task_name)
     if not task:
         logging.error(f"Unknown research task: {task_name}")
         return []
+
+    if email and task_name in PREMIUM_RESEARCH_TASKS:
+        from app.access.premium import is_premium_user
+        if not is_premium_user(email):
+            logging.info(
+                f"Research task '{task_name}' is premium-only. Skipping for {email}."
+            )
+            return []
 
     logging.info(f"Running research task: {task_name} (live web search)")
 
@@ -212,10 +230,15 @@ def run_research_task(task_name: str) -> list:
     return results
 
 
-def run_all_research() -> dict:
-    """Run all RentPulse research tasks and return a summary dict."""
+def run_all_research(email: str = "") -> dict:
+    """
+    Run all RentPulse research tasks and return a summary dict.
+
+    Pass email to enforce per-user premium gating on PREMIUM_RESEARCH_TASKS.
+    Omit email (scheduler default) to run all tasks regardless of gating.
+    """
     results = {}
     for task_name in RESEARCH_TASKS:
-        results[task_name] = run_research_task(task_name)
+        results[task_name] = run_research_task(task_name, email=email)
         logging.info(f"Completed: {task_name} ({len(results[task_name])} items)")
     return results

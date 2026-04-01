@@ -1,8 +1,8 @@
 # Project Roadmap
 
-**Last updated:** 2026-03-31
+**Last updated:** 2026-04-01
 **Project:** RentPulse Automation System
-**Status:** Local build complete — pre-deployment
+**Status:** Stage 8 complete — premium gating active, ready for database migration
 
 ---
 
@@ -24,14 +24,18 @@ This system is a local automation assistant built around **RentPulse**, a Chrome
 rentpulse-social-bot/
 │
 ├── app/
+│   ├── access/              # Premium access gate
+│   │   └── premium.py           — is_premium_user(email), require_premium(email)
+│   │
 │   ├── agents/              # Core agent logic
 │   │   ├── job_hunter.py        — web search job finder + fit scorer
 │   │   ├── job_tracker.py       — application tracker (status, shortlist, CV match)
 │   │   ├── cv_profile.py        — candidate profile + local CV matching
 │   │   ├── support_triage.py    — Gmail IMAP fetch + rule-based classifier
 │   │   ├── payment_handler.py   — Stripe event parser + dispatcher
-│   │   ├── payment_actions.py   — post-payment actions (notify, save customer)
-│   │   └── customer_store.py    — adapter: maps payment record → storage interface
+│   │   ├── payment_actions.py   — post-payment actions (notify, save customer, link user)
+│   │   ├── customer_store.py    — adapter: maps payment record → storage interface
+│   │   └── scam_detector.py     — premium-only scam detection (stub, not yet implemented)
 │   │
 │   ├── content/             # Post generation
 │   │   ├── generator.py         — Claude-powered social post generator
@@ -135,6 +139,13 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 - [x] Payment success flow calls `link_payment_to_user` — skips safely on blank email or duplicate session
 - [x] `tests/test_user_linking.py` — isolated local test showing full payment → user created → session linked flow
 
+### Premium gating (Stage 8)
+- [x] `app/access/premium.py` — `is_premium_user(email)`, `require_premium(email)`, `PREMIUM_ENABLED` flag
+- [x] `app/agents/scam_detector.py` — premium-only stub with gating and TODO for real logic
+- [x] `rentpulse_researcher.py` — `leads` and `competitors` tasks gated when called with user email
+- [x] Scheduler calls bypass gate (no email in context) — all tasks always run on schedule
+- [x] `PREMIUM_ENABLED` env var — set to `false` to disable all gating globally
+
 ### Dashboard
 - [x] Express proxy server (`server.cjs`) with local data API
 - [x] React dashboard (Vite)
@@ -145,6 +156,7 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 - [x] **Payments tab** — payment events table
 - [x] **Customers tab** — customer records table
 - [x] **Support tab** — support tickets table
+- [x] **Users tab** — user records, premium/free status badges, linked session count, upgrade placeholder
 
 ### CLI runners
 - [x] `run_job_hunt.py` — trigger job search manually
@@ -155,14 +167,14 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 
 ## SECTION 4: Current Position
 
-The system is fully built and functional in local/build mode. Every subsystem — job hunting, support triage, payments, customer storage, user accounts, social media automation, and the dashboard — is implemented and wired together. The storage layer has been abstracted so that swapping from JSON to a database requires changing two import lines. User account records are now created and linked to payment sessions automatically on payment success. No automation is running: all agents are triggered manually via CLI runners, and no schedulers, triggers, or cron jobs are active.
+Stage 8 is complete. Premium gating is active and scaffolded against local user storage — no Stripe dependency in the gate itself. The gate reads `premium_status` from the same user records that the payment flow already populates. Free users are blocked from `leads` and `competitors` research tasks (when called with an email) and from scam detection. The scheduler bypasses the gate and always runs all tasks. The dashboard has a Users tab showing premium status per account. Scam detection is stubbed — the gate is wired but the detection logic is not implemented. The next priority is database migration to Supabase, followed by `render.yaml` and production deployment.
 
 ---
 
 ## SECTION 5: Next Steps
 
 1. ~~**Link payments to user accounts**~~ — done: `user_linker.py` scaffolding complete
-2. **Premium gating** — restrict access to certain features (alerts, tracker, CV matching) based on `premium_status` field in user record
+2. ~~**Premium gating**~~ — done: `app/access/premium.py`, researcher gating, scam detector stub, Users dashboard tab
 3. **Database migration (Supabase)** — implement `app/storage/supabase_backend.py` with the same seven function signatures and swap the import in `app/storage/__init__.py`
 4. **`render.yaml`** — define services, environment variables, and build commands for Render deployment
 5. **Production deployment** — deploy webhook listener and scheduler to Render; point Stripe webhook URL to live endpoint
@@ -199,6 +211,40 @@ The system is fully built and functional in local/build mode. Every subsystem �
 ---
 
 ## SECTION 7: Recent Updates
+
+### 2026-04-01 — Stage 8: Premium access gating
+
+Added a premium access gate backed by local user storage. No Stripe dependency in the gate — it reads from the `premium_status` field that the existing payment flow already sets.
+
+**New files:**
+- `app/access/__init__.py` — package init
+- `app/access/premium.py` — `is_premium_user(email)`, `require_premium(email)`, `PREMIUM_ENABLED` flag
+- `app/agents/scam_detector.py` — premium-only stub; detection logic is a TODO; signals listed in comments
+
+**Modified files:**
+- `app/agents/rentpulse_researcher.py` — added `PREMIUM_RESEARCH_TASKS = {"leads", "competitors"}`; `run_research_task` and `run_all_research` accept optional `email` parameter; gate activates only when email is provided
+- `.env.example` — added `PREMIUM_ENABLED=true`
+- `dashboard/server.cjs` — added `GET /api/data/users` endpoint
+- `dashboard/src/App.jsx` — added Users tab: user table with Premium/Free badges, session count, upgrade placeholder, gating info panel
+
+**Free vs premium:**
+
+| Feature | Free | Premium |
+|---|---|---|
+| `content_ideas` research | Yes | Yes |
+| `complaints` research | Yes | Yes |
+| `leads` research (user context) | Blocked | Yes |
+| `competitors` research (user context) | Blocked | Yes |
+| Scam detection | Blocked | Yes (logic not implemented) |
+| Scheduler runs | All tasks | — |
+
+**Known limitations:**
+- Scam detection logic not yet implemented (stub only)
+- No expiry on premium — status persists until manually cleared
+- No admin API to set/revoke premium from the dashboard
+- Still on local JSON storage — will move to Supabase in Stage 9
+
+---
 
 ### 2026-03-31 — Payment-to-user linking scaffolding
 

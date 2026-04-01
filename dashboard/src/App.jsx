@@ -1127,7 +1127,7 @@ export default function App() {
   const [agentStatus, setAgentStatus] = useState("idle");
 
   // ---- Navigation state ----
-  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs" | "payments" | "customers" | "support" | "runs"
+  const [section, setSection] = useState("rentpulse");   // "rentpulse" | "jobs" | "payments" | "customers" | "support" | "runs" | "users"
   const [rpTab, setRpTab] = useState("social");           // "social" | "research"
   const [jobsTab, setJobsTab] = useState("search");       // "search" | "tracker"
 
@@ -1147,6 +1147,10 @@ export default function App() {
   const [runsData, setRunsData] = useState(null);
   const [runsLoading, setRunsLoading] = useState(false);
   const [running, setRunning] = useState({ rentpulse: false, "job-hunt": false, support: false });
+
+  // ---- Users / premium state ----
+  const [usersData, setUsersData] = useState(null);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   // ---- Init: restore posted state + start social agent ----
   useEffect(() => {
@@ -1169,6 +1173,7 @@ export default function App() {
     if (section === "support" && !supportData) loadSupportData();
     if (section === "jobs" && jobsTab === "tracker" && !trackerData) loadTrackerData();
     if (section === "runs" && !runsData) loadRunsData();
+    if (section === "users" && !usersData) loadUsersData();
   }, [section]);
 
   useEffect(() => {
@@ -1261,6 +1266,18 @@ export default function App() {
       setRunsData({});
     } finally {
       setRunsLoading(false);
+    }
+  };
+
+  const loadUsersData = async () => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch(`${DATA_API}/users`);
+      setUsersData(await res.json());
+    } catch {
+      setUsersData({ users: [] });
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -1467,6 +1484,9 @@ export default function App() {
         <button onClick={() => setSection("runs")} style={sectionTabStyle(section === "runs")}>
           Run Controls
         </button>
+        <button onClick={() => setSection("users")} style={sectionTabStyle(section === "users")}>
+          Users
+        </button>
       </div>
 
       {/* ---- RENTPULSE SECTION ---- */}
@@ -1625,6 +1645,93 @@ export default function App() {
           onRunAll={triggerRunAll}
           onRefresh={() => { setRunsData(null); loadRunsData(); }}
         />
+      )}
+
+      {/* ---- USERS / PREMIUM SECTION ---- */}
+      {section === "users" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Users</h2>
+            <button onClick={() => { setUsersData(null); loadUsersData(); }} style={{ fontSize: 12, padding: "4px 10px", cursor: "pointer" }}>
+              Refresh
+            </button>
+          </div>
+
+          {/* Premium gating note */}
+          <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 6, fontSize: 12, color: "#0369a1" }}>
+            <strong>Premium gating is active.</strong> Users with <code>premium_status: true</code> get access to leads research, competitor research, and scam detection. Free users get content ideas and complaints only.
+            <br />
+            <span style={{ color: "#64748b" }}>To grant premium locally for testing: <code>python -c "from app.agents.user_linker import create_user_if_missing, link_payment_to_user; create_user_if_missing('email'); link_payment_to_user('test_01', 'email')"</code></span>
+          </div>
+
+          {usersLoading && <p style={{ color: "#64748b" }}>Loading...</p>}
+          {!usersLoading && usersData && (
+            <>
+              {/* Summary */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 20px", minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Total Users</div>
+                  <div style={{ fontSize: 24, fontWeight: 700 }}>{usersData.users.length}</div>
+                </div>
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 20px", minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Premium</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#15803d" }}>
+                    {usersData.users.filter(u => u.premium_status).length}
+                  </div>
+                </div>
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 20px", minWidth: 120 }}>
+                  <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Free</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "#64748b" }}>
+                    {usersData.users.filter(u => !u.premium_status).length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Users table */}
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                    <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Email</th>
+                    <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Status</th>
+                    <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Created</th>
+                    <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>Linked Sessions</th>
+                    <th style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersData.users.length === 0 && (
+                    <tr><td colSpan={5} style={{ padding: "12px 10px", color: "#94a3b8" }}>No users found. Users are created automatically on first payment.</td></tr>
+                  )}
+                  {usersData.users.map((u, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "7px 10px" }}>{u.email || "—"}</td>
+                      <td style={{ padding: "7px 10px" }}>
+                        {u.premium_status
+                          ? <span style={{ background: "#dcfce7", color: "#15803d", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>Premium</span>
+                          : <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>Free</span>
+                        }
+                      </td>
+                      <td style={{ padding: "7px 10px" }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}</td>
+                      <td style={{ padding: "7px 10px", fontSize: 11, color: "#64748b" }}>
+                        {(u.linked_payment_session_ids || []).length} session{(u.linked_payment_session_ids || []).length !== 1 ? "s" : ""}
+                      </td>
+                      <td style={{ padding: "7px 10px" }}>
+                        {!u.premium_status && (
+                          <span
+                            title="Upgrade not yet wired — use link_payment_to_user() locally to grant premium"
+                            style={{ fontSize: 11, color: "#9ca3af", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 8px", cursor: "default" }}
+                          >
+                            Upgrade
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
       )}
 
       {/* ---- SUPPORT SECTION ---- */}

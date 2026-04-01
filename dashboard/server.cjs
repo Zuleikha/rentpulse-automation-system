@@ -176,6 +176,13 @@ app.get("/api/data/customers", (req, res) => {
   res.json({ customers });
 });
 
+// ---- Users / premium status endpoint ----
+
+app.get("/api/data/users", (req, res) => {
+  const users = readJson(path.join(DATA_ROOT, "users", "users.json"));
+  res.json({ users: Array.isArray(users) ? users : [] });
+});
+
 // ---- Support tickets data endpoint ----
 
 app.get("/api/data/support", (req, res) => {
