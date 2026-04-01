@@ -26,7 +26,7 @@ User record structure:
 import uuid
 from datetime import datetime, timezone
 
-from app.storage.users import save_user, get_users, update_user
+from app.storage import save_user, get_users, update_user
 
 
 def create_user_if_missing(email: str) -> dict:
