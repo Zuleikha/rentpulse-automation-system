@@ -45,9 +45,9 @@ from app.agents.user_linker import (
 # ---------------------------------------------------------------------------
 
 def _section(title: str) -> None:
-    print(f"\n{'─' * 60}")
+    print(f"\n{'-' * 60}")
     print(f"  {title}")
-    print('─' * 60)
+    print('-' * 60)
 
 
 def _assert(condition: bool, msg: str) -> None:
@@ -167,6 +167,6 @@ if __name__ == "__main__":
     test_get_user_not_found()
     test_new_user_created_by_link()
 
-    print(f"\n{'═' * 60}")
+    print(f"\n{'=' * 60}")
     print("  All tests passed.")
-    print(f"{'═' * 60}\n")
+    print(f"{'=' * 60}\n")
