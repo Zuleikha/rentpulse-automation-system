@@ -1,8 +1,8 @@
 # Project Roadmap
 
-**Last updated:** 2026-04-01
+**Last updated:** 2026-04-03
 **Project:** RentPulse Automation System
-**Status:** Stage 8 complete — premium gating active, ready for database migration
+**Status:** Stage 9 in progress — Supabase migration started (`supabase_backend.py` created)
 
 ---
 
@@ -167,7 +167,7 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 
 ## SECTION 4: Current Position
 
-Stage 8 is complete. Premium gating is active and scaffolded against local user storage — no Stripe dependency in the gate itself. The gate reads `premium_status` from the same user records that the payment flow already populates. Free users are blocked from `leads` and `competitors` research tasks (when called with an email) and from scam detection. The scheduler bypasses the gate and always runs all tasks. The dashboard has a Users tab showing premium status per account. Scam detection is stubbed — the gate is wired but the detection logic is not implemented. The next priority is database migration to Supabase, followed by `render.yaml` and production deployment.
+Stage 9 is in progress. Stage 8 (premium gating) is complete. The Supabase migration has been started — `app/storage/supabase_backend.py` now exists with the Supabase client initialised. The next step is to implement the seven storage function signatures in that file, then swap the import in `app/storage/__init__.py`. No other files have been changed. The JSON backend remains the active backend until the swap is made.
 
 ---
 
@@ -175,7 +175,7 @@ Stage 8 is complete. Premium gating is active and scaffolded against local user 
 
 1. ~~**Link payments to user accounts**~~ — done: `user_linker.py` scaffolding complete
 2. ~~**Premium gating**~~ — done: `app/access/premium.py`, researcher gating, scam detector stub, Users dashboard tab
-3. **Database migration (Supabase)** — implement `app/storage/supabase_backend.py` with the same seven function signatures and swap the import in `app/storage/__init__.py`
+3. **Database migration (Supabase)** — `app/storage/supabase_backend.py` created with client setup (Stage 9 in progress); implement the seven function signatures (`save_payment`, `get_payments`, `save_customer`, `get_customers`, `save_user`, `get_users`, `update_user`) then swap import in `app/storage/__init__.py`
 4. **`render.yaml`** — define services, environment variables, and build commands for Render deployment
 5. **Production deployment** — deploy webhook listener and scheduler to Render; point Stripe webhook URL to live endpoint
 
@@ -211,6 +211,20 @@ Stage 8 is complete. Premium gating is active and scaffolded against local user 
 ---
 
 ## SECTION 7: Recent Updates
+
+### 2026-04-03 — Stage 9 started: Supabase backend scaffold
+
+**New files:**
+- `app/storage/supabase_backend.py` — Supabase client initialised via `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; seven storage function stubs to be implemented next
+
+**Dependencies:**
+- `supabase==2.28.3` installed
+
+**What is NOT done yet:**
+- The seven storage functions are not implemented — JSON backend is still active
+- `app/storage/__init__.py` import not changed yet
+
+---
 
 ### 2026-04-01 — Stage 8: Premium access gating
 
