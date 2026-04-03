@@ -8,7 +8,7 @@ Automation system for RentPulse. Handles social media content generation, market
 
 | Module | What it does |
 |---|---|
-| `app/agents/` | Core agents: research, content, job hunting, payments, users, scam detection |
+| `app/agents/` | Core agents: research, content, payments, users, scam detection |
 | `app/access/` | Premium access gate — `is_premium_user(email)`, `require_premium(email)` |
 | `app/content/` | Claude-powered post generator and platform prompt templates |
 | `app/platforms/` | Social platform API integrations (Twitter, Reddit, Bluesky, LinkedIn, etc.) |
@@ -22,18 +22,17 @@ Automation system for RentPulse. Handles social media content generation, market
 
 ## Current project status
 
-**Stage 8 (premium gating) is implemented.** See `docs/PROJECT_ROADMAP.md` for full stage history.
+**Stage 9 (Supabase backend) is complete.** See `docs/PROJECT_ROADMAP.md` for full stage history.
 
 | Area | Status |
 |---|---|
 | Social post generation | Done |
 | Market research (leads, complaints, competitors, content ideas) | Done |
-| Job hunter + application tracker | Done |
 | Stripe webhook (local + Render) | Done |
 | Payment processing + customer storage | Done |
 | User account model + payment linking | Done |
 | Premium access gate | Done (scaffold — local storage, no Stripe dependency) |
-| Database migration (Supabase) | Not started |
+| Database migration (Supabase) | Done |
 | Production deployment | Not started |
 
 ---
@@ -94,8 +93,6 @@ npm run dev            # Vite dev server — port 5173
 
 ```bash
 python run_rentpulse_research.py   # market research (web search)
-python run_job_hunt.py             # job search (web search)
-python run_job_tracker.py          # update application tracker
 python run_support_triage.py       # triage Gmail support inbox
 python run_scheduler.py            # start the automated scheduler loop
 ```
@@ -134,7 +131,6 @@ python run_payment_webhook.py   # listens on port 8765, POST /webhook
 | Tab | What it shows |
 |---|---|
 | RentPulse | Social post generator + research results (leads, complaints, competitors, content ideas) |
-| Job Hunting | Job search results + application tracker |
 | Payments | Payment events from Stripe |
 | Customers | Customer records (deduplicated by email) |
 | Support | Support ticket triage results |

@@ -8,10 +8,9 @@
 
 ## SECTION 1: Project Overview
 
-This system is a local automation assistant built around **RentPulse**, a Chrome extension for Irish rental market alerts. It handles four distinct workstreams from a single codebase:
+This system is a local automation assistant built around **RentPulse**, a Chrome extension for Irish rental market alerts. It handles three distinct workstreams from a single codebase:
 
 - **RentPulse** — automated social media post generation and scheduling for platforms including Twitter/X, Threads, Bluesky, Reddit, Facebook, Instagram, TikTok, Indie Hackers, and Product Hunt
-- **Job Hunter** — AI-powered job search agent that finds real active roles in Ireland, scores them for fit, and tracks applications through a full application lifecycle
 - **Support** — Gmail-based support triage that classifies incoming emails by category, priority, and sentiment and saves structured tickets locally
 - **Payments** — Stripe webhook listener that receives, validates, deduplicates, and stores payment events and customer records locally
 - **Dashboard** — Local React dashboard (Vite + Express proxy) that surfaces all data across every subsystem in one place
@@ -28,9 +27,6 @@ rentpulse-automation-system/
 │   │   └── premium.py           — is_premium_user(email), require_premium(email)
 │   │
 │   ├── agents/              # Core agent logic
-│   │   ├── job_hunter.py        — web search job finder + fit scorer
-│   │   ├── job_tracker.py       — application tracker (status, shortlist, CV match)
-│   │   ├── cv_profile.py        — candidate profile + local CV matching
 │   │   ├── support_triage.py    — Gmail IMAP fetch + rule-based classifier
 │   │   ├── payment_handler.py   — Stripe event parser + dispatcher
 │   │   ├── payment_actions.py   — post-payment actions (notify, save customer, link user)
@@ -71,7 +67,6 @@ rentpulse-automation-system/
 │   └── src/App.jsx              — React dashboard (Vite)
 │
 ├── data/                    # All local data (JSON/CSV)
-│   ├── jobs/                    — jobs.json, summary.json, job_applications.json
 │   ├── payments/                — payment_events.json
 │   ├── customers/               — customers.json
 │   ├── support/                 — support_tickets.json
@@ -89,14 +84,6 @@ Stripe → webhook → payment_handler → app.storage.save_payment → data/pay
                                                      → Telegram notification
 ```
 
-### Data flow — job hunt
-
-```
-run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
-                                                  → job_tracker.add_to_tracker (CV match)
-                                                  → notify_new_jobs (Telegram, if configured)
-```
-
 ---
 
 ## SECTION 3: Completed Work
@@ -108,9 +95,6 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 - [x] Telegram notifier (`notifier.py` — send, approval flow, edit, flush)
 
 ### Agents
-- [x] **Job Hunter** — Claude web search, fit scoring, CSV + JSON output
-- [x] **Job Tracker** — application lifecycle (saved → applied → interview → offer/rejected)
-- [x] **CV Matcher** — local keyword-based match score, no API call required
 - [x] **RentPulse Researcher** — leads, complaints, competitors, content ideas
 - [x] **Support Triage** — Gmail IMAP fetch, rule-based + Claude fallback classification, deduplication by message ID
 
@@ -151,16 +135,12 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 - [x] React dashboard (Vite)
 - [x] **RentPulse tab** — social post generator (all 9 platforms), news check, post approval
 - [x] **Research tab** — leads, complaints, competitors, content ideas
-- [x] **Job Hunting tab** — job search results, best matches, applied tracker
-- [x] **Application Tracker tab** — all/shortlisted/applied views, CV match score, status badges
 - [x] **Payments tab** — payment events table
 - [x] **Customers tab** — customer records table
 - [x] **Support tab** — support tickets table
 - [x] **Users tab** — user records, premium/free status badges, linked session count, upgrade placeholder
 
 ### CLI runners
-- [x] `run_job_hunt.py` — trigger job search manually
-- [x] `run_job_tracker.py` — import-jobs, list, shortlist, apply, status update
 - [x] `run_support_triage.py` — trigger support email fetch manually
 
 ---
@@ -183,18 +163,7 @@ Stage 9 is complete. All seven Supabase storage functions are implemented and te
 
 ## SECTION 6: Future Improvements
 
-### Job tracking
-- [ ] Browser-based status updates (mark applied/shortlisted from dashboard)
-- [ ] Email reminders for stale applications
-- [ ] Export tracker to CSV
-
-### CV matching
-- [ ] Richer profile configuration (upload actual CV text)
-- [ ] Claude-powered deep match analysis (optional, on demand)
-- [ ] Missing skill gap suggestions
-
 ### Alerts and notifications
-- [ ] Telegram alert for new high-fit jobs (requires Telegram config)
 - [ ] Alert when support ticket volume spikes
 - [ ] Payment confirmation email to customer
 
@@ -211,6 +180,26 @@ Stage 9 is complete. All seven Supabase storage functions are implemented and te
 ---
 
 ## SECTION 7: Recent Updates
+
+### 2026-04-03 — Job hunt workstream extracted to standalone project
+
+**Reason:** Job hunt tooling was personal (not RentPulse-related) and was polluting this repo.
+
+**Deleted from this repo:**
+- `app/agents/job_hunter.py`, `job_tracker.py`, `cv_profile.py`
+- `run_job_hunt.py`, `run_job_tracker.py`, `find_jobs.py`, `test_write_jobs.py`
+
+**Modified:**
+- `app/agents/__init__.py` — removed `job_hunter` from docstring
+- `app/utils/local_storage.py` — removed `JOBS_DIR`, `TRACKER_FILE` constants
+- `app/scheduler/agent_scheduler.py` — removed `job_job_hunter()` wrapper and schedule registration
+- `dashboard/server.cjs` — removed `GET /api/data/jobs`, `GET /api/data/jobs/tracker`, `POST /api/run/job-hunt`
+- `dashboard/src/App.jsx` — removed `JobHuntingSection`, `JobTrackerSection`, all related state/loaders/nav
+- `README.md`, `docs/PROJECT_ROADMAP.md` — all job hunt references removed
+
+**New standalone project:** `D:\job-hunt-automation\` — fully self-contained with its own dashboard, storage, and CLI.
+
+---
 
 ### 2026-04-03 — Stage 9 complete: Supabase backend live
 
@@ -303,14 +292,13 @@ Added a Run Controls tab to the dashboard. Agents can now be triggered by clicki
 - `data/runs/run_log.json` — created on first run; stores one status entry per agent
 
 **Modified files:**
-- `dashboard/server.cjs` — added `POST /api/run/rentpulse`, `/api/run/job-hunt`, `/api/run/support`, `/api/run/all`; added `GET /api/data/runs`; added `runScript()` helper using Node.js `child_process.spawn`
+- `dashboard/server.cjs` — added `POST /api/run/rentpulse`, `/api/run/support`, `/api/run/all`; added `GET /api/data/runs`; added `runScript()` helper using Node.js `child_process.spawn`
 - `dashboard/src/App.jsx` — added `RunControlsSection` component, `RunStatusBadge`, `RUN_API` constant, `runsData`/`running` state, `loadRunsData`, `triggerRun`, `triggerRunAll` functions, "Run Controls" nav tab
 
 **What each button does:**
 - **Run RentPulse** → spawns `python run_rentpulse_research.py`
-- **Run Job Hunt** → spawns `python run_job_hunt.py`
 - **Run Support** → spawns `python run_support_triage.py`
-- **Run All** → runs all three in sequence (each waits for previous to finish)
+- **Run All** → runs both in sequence (each waits for previous to finish)
 
 **Run status structure** (`data/runs/run_log.json`):
 ```json

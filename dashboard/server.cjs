@@ -121,27 +121,6 @@ function readCsv(filePath) {
   }
 }
 
-// ---- Jobs data endpoint ----
-
-app.get("/api/data/jobs/tracker", (req, res) => {
-  const all = readJson(path.join(DATA_ROOT, "jobs", "job_applications.json"));
-  const list = Array.isArray(all) ? all : [];
-  res.json({
-    all:         list,
-    shortlisted: list.filter(j => j.shortlisted),
-    applied:     list.filter(j => ["applied", "interview", "offer"].includes(j.status)),
-  });
-});
-
-app.get("/api/data/jobs", (req, res) => {
-  const dir = path.join(DATA_ROOT, "jobs");
-  res.json({
-    jobs:        readJson(path.join(dir, "jobs.json")),
-    summary:     readJson(path.join(dir, "summary.json")),
-    job_tracker: readJson(path.join(dir, "job_tracker.json")),
-  });
-});
-
 // ---- RentPulse research data endpoint ----
 
 app.get("/api/data/rentpulse", (req, res) => {
@@ -199,11 +178,6 @@ app.post("/api/run/rentpulse", (req, res) => {
   runScript("rentpulse", "run_rentpulse_research.py");
 });
 
-app.post("/api/run/job-hunt", (req, res) => {
-  res.json({ started: true, project: "job-hunt" });
-  runScript("job-hunt", "run_job_hunt.py");
-});
-
 app.post("/api/run/support", (req, res) => {
   res.json({ started: true, project: "support" });
   runScript("support", "run_support_triage.py");
@@ -213,7 +187,6 @@ app.post("/api/run/all", async (req, res) => {
   res.json({ started: true, project: "all" });
   // Sequential: each agent waits for the previous to finish.
   await runScript("rentpulse", "run_rentpulse_research.py");
-  await runScript("job-hunt", "run_job_hunt.py");
   await runScript("support", "run_support_triage.py");
 });
 
