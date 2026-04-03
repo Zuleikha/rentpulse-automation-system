@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-04-03
 **Project:** RentPulse Automation System
-**Status:** Stage 9 in progress — Supabase migration started (`supabase_backend.py` created)
+**Status:** Stage 9 complete — Supabase backend live
 
 ---
 
@@ -167,7 +167,7 @@ run_job_hunt.py → job_hunter (Claude web search) → jobs.json + summary.json
 
 ## SECTION 4: Current Position
 
-Stage 9 is in progress. Stage 8 (premium gating) is complete. The Supabase migration has been started — `app/storage/supabase_backend.py` now exists with the Supabase client initialised. The next step is to implement the seven storage function signatures in that file, then swap the import in `app/storage/__init__.py`. No other files have been changed. The JSON backend remains the active backend until the swap is made.
+Stage 9 is complete. All seven Supabase storage functions are implemented and tested against live Supabase: `save_payment`, `get_payments`, `save_customer`, `get_customers`, `save_user`, `get_users`, `update_user`. The import in `app/storage/__init__.py` has been swapped to the single Supabase import. The JSON backend (`payments.py`, `customers.py`, `users.py`) is no longer active. All three Supabase tables (`payments`, `customers`, `users`) are live with the correct schema. The next priority is `render.yaml` and production deployment to Render.
 
 ---
 
@@ -175,7 +175,7 @@ Stage 9 is in progress. Stage 8 (premium gating) is complete. The Supabase migra
 
 1. ~~**Link payments to user accounts**~~ — done: `user_linker.py` scaffolding complete
 2. ~~**Premium gating**~~ — done: `app/access/premium.py`, researcher gating, scam detector stub, Users dashboard tab
-3. **Database migration (Supabase)** — `app/storage/supabase_backend.py` created with client setup (Stage 9 in progress); implement the seven function signatures (`save_payment`, `get_payments`, `save_customer`, `get_customers`, `save_user`, `get_users`, `update_user`) then swap import in `app/storage/__init__.py`
+3. ~~**Database migration (Supabase)**~~ — done: all 7 functions implemented in `supabase_backend.py`, tables live, import swapped in `app/storage/__init__.py`
 4. **`render.yaml`** — define services, environment variables, and build commands for Render deployment
 5. **Production deployment** — deploy webhook listener and scheduler to Render; point Stripe webhook URL to live endpoint
 
@@ -212,17 +212,24 @@ Stage 9 is in progress. Stage 8 (premium gating) is complete. The Supabase migra
 
 ## SECTION 7: Recent Updates
 
-### 2026-04-03 — Stage 9 started: Supabase backend scaffold
+### 2026-04-03 — Stage 9 complete: Supabase backend live
 
-**New files:**
-- `app/storage/supabase_backend.py` — Supabase client initialised via `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; seven storage function stubs to be implemented next
+**Modified files:**
+- `app/storage/supabase_backend.py` — fully implemented: `save_payment`, `get_payments`, `save_customer`, `get_customers`, `save_user`, `get_users`, `update_user`; deduplication by `session_id` (payments) and `email` (customers, users); `load_dotenv()` at top
+- `app/storage/__init__.py` — three JSON backend imports replaced with single Supabase import
 
-**Dependencies:**
-- `supabase==2.28.3` installed
+**Supabase tables created:**
+- `payments` — `id` (uuid), `session_id` (text unique), `amount` (numeric), `created_at`
+- `customers` — `id` (uuid), `email` (text unique), `amount` (numeric), `timestamp` (text), `created_at`
+- `users` — `id` (uuid), `email` (text unique), `user_id` (text), `premium_status` (boolean), `linked_payment_session_ids` (jsonb), `notes` (text), `created_at`
 
-**What is NOT done yet:**
-- The seven storage functions are not implemented — JSON backend is still active
-- `app/storage/__init__.py` import not changed yet
+**Test results (all passing):**
+- `save_payment` → `True`, `get_payments` → returns record
+- `save_customer` → `True`, `get_customers` → returns record
+- `save_user` → `True`, `get_users` → returns record with `premium_status: False`
+- `update_user` → `True`, `get_users` after update → `premium_status: True`
+
+**JSON backend status:** no longer active; `payments.py`, `customers.py`, `users.py` remain in place but are not imported
 
 ---
 
