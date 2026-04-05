@@ -1,8 +1,8 @@
 # Project Roadmap
 
-**Last updated:** 2026-04-03
+**Last updated:** 2026-04-05
 **Project:** RentPulse Automation System
-**Status:** Stage 9 complete — Supabase backend live
+**Status:** Stage 10 complete — Render deployment live
 
 ---
 
@@ -147,7 +147,7 @@ Stripe → webhook → payment_handler → app.storage.save_payment → data/pay
 
 ## SECTION 4: Current Position
 
-Stage 9 is complete. All seven Supabase storage functions are implemented and tested against live Supabase: `save_payment`, `get_payments`, `save_customer`, `get_customers`, `save_user`, `get_users`, `update_user`. The import in `app/storage/__init__.py` has been swapped to the single Supabase import. The JSON backend (`payments.py`, `customers.py`, `users.py`) is no longer active. All three Supabase tables (`payments`, `customers`, `users`) are live with the correct schema. The next priority is `render.yaml` and production deployment to Render.
+Stage 10 is complete. The webhook server is live on Render at `https://rentpulse-automation-system.onrender.com`. `render.yaml` defines the service, build command, start command, and all required environment variables. Dependencies have been resolved for Python 3.14 (`python-telegram-bot==21.0`, `supabase==2.7.4`, `httpx==0.27.0`). A `/health` endpoint returns `{"status": "ok"}` for Render's uptime checks. The startup is wrapped in try/except so any import or config error prints clearly before exit.
 
 ---
 
@@ -156,8 +156,9 @@ Stage 9 is complete. All seven Supabase storage functions are implemented and te
 1. ~~**Link payments to user accounts**~~ — done: `user_linker.py` scaffolding complete
 2. ~~**Premium gating**~~ — done: `app/access/premium.py`, researcher gating, scam detector stub, Users dashboard tab
 3. ~~**Database migration (Supabase)**~~ — done: all 7 functions implemented in `supabase_backend.py`, tables live, import swapped in `app/storage/__init__.py`
-4. **`render.yaml`** — define services, environment variables, and build commands for Render deployment
-5. **Production deployment** — deploy webhook listener and scheduler to Render; point Stripe webhook URL to live endpoint
+4. ~~**`render.yaml`**~~ — done: service, env vars, build/start commands defined
+5. ~~**Production deployment**~~ — done: live at `https://rentpulse-automation-system.onrender.com`
+6. **Point Stripe webhook URL** — update Stripe dashboard to send events to `https://rentpulse-automation-system.onrender.com/api/stripe/webhook`
 
 ---
 
@@ -180,6 +181,22 @@ Stage 9 is complete. All seven Supabase storage functions are implemented and te
 ---
 
 ## SECTION 7: Recent Updates
+
+### 2026-04-05 — Stage 10 complete: Render deployment live
+
+**New files:**
+- `render.yaml` — Render service definition: Python web service, `pip install -r requirements.txt` build, `python run_render_webhook.py` start, all required env vars declared
+
+**Modified files:**
+- `run_render_webhook.py` — startup wrapped in try/except; any import or config error now prints clearly before `SystemExit(1)`
+- `app/webhook/render_webhook.py` — `/health` endpoint added; returns `{"status": "ok"}` for Render uptime checks
+- `requirements.txt` — dependencies resolved for Python 3.14: `python-telegram-bot==21.0`, `supabase==2.7.4`, `httpx==0.27.0`
+
+**Live URL:** `https://rentpulse-automation-system.onrender.com`  
+**Health check:** `https://rentpulse-automation-system.onrender.com/health`  
+**Webhook endpoint:** `https://rentpulse-automation-system.onrender.com/api/stripe/webhook`
+
+---
 
 ### 2026-04-03 — Job hunt workstream extracted to standalone project
 
