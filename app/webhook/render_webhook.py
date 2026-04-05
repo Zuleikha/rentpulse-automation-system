@@ -61,7 +61,12 @@ def _verify_stripe_signature(raw_body: bytes, sig_header: str, secret: str) -> b
         return False
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.route('/health')
+def health():
+    return {'status': 'ok'}, 200
+
 
 @app.route("/api/stripe/webhook", methods=["POST"])
 def stripe_webhook():
