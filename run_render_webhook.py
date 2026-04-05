@@ -23,8 +23,12 @@ from app.utils.local_storage import ensure_dirs
 ensure_dirs()
 
 if __name__ == "__main__":
-    from app.webhook.render_webhook import app
+    try:
+        from app.webhook.render_webhook import app
 
-    port = int(os.getenv("PORT", 8766))
-    print(f"RentPulse Stripe webhook (Render) listening on port {port}")
-    app.run(host="0.0.0.0", port=port)
+        port = int(os.getenv("PORT", 8766))
+        print(f"RentPulse Stripe webhook (Render) listening on port {port}")
+        app.run(host="0.0.0.0", port=port)
+    except Exception as e:
+        print(f"ERROR: {e}")
+        raise SystemExit(1)
